@@ -11,7 +11,7 @@ git clone https://github.com/Genrih/ZipDownloadUrl.git
 ### Уставинить зависимости, если не установились при копировании
 
 ```bash
-go get go get github.com/gorilla/mux
+go get github.com/gorilla/mux
 ```
 
 ### 2. Запуск сервера
