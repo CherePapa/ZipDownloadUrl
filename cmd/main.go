@@ -5,18 +5,23 @@ import (
 	"net/http"
 
 	"github.com/CherePapa/ZipDownloadUrl/internal"
+	"github.com/gorilla/mux"
 )
 
 func main() {
 	internal.InitArchiveFolder()
 
-	http.HandleFunc("/task/create", internal.HandleCreateTask)
-	http.HandleFunc("/task/add", internal.HandleAddFile)
-	http.HandleFunc("/task/statusFile", internal.HandleStatus)
-	http.HandleFunc("/task/statusesFile", internal.HandleMultiStatus)
+	r := mux.NewRouter()
 
-	http.Handle("/archive/", http.StripPrefix("/archive/", http.FileServer(http.Dir("./archives"))))
+	r.HandleFunc("/task/create", internal.HandleCreateTask).Methods("POST")
+	r.HandleFunc("/task/add", internal.HandleAddFile).Methods("POST")
+	r.HandleFunc("/task/statusFile/{task_id}", internal.HandleStatus).Methods("GET")
+	r.HandleFunc("/tasks", internal.HandleMultiStatus).Methods("GET")
+
+	r.PathPrefix("/archive/").Handler(
+		http.StripPrefix("/archive/", http.FileServer(http.Dir("./archives"))),
+	)
 
 	log.Println("[ZipDownloadUrl] Server running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 type TaskStatusResponse struct {
@@ -54,10 +56,15 @@ func HandleAddFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleStatus(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	vars := mux.Vars(r)
+	id := vars["task_id"]
+
+	if id == "" {
+		http.Error(w, "Нужен параметр task_id", http.StatusBadRequest)
+		return
+	}
 
 	task, err := getTask(id)
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -82,13 +89,19 @@ func HandleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleMultiStatus(w http.ResponseWriter, r *http.Request) {
-	idsParam := r.URL.Query().Get("ids")
-	if idsParam == "" {
-		http.Error(w, "Нужен парметр ids", http.StatusBadRequest)
+	var ids []string
+
+	taskMutex.Lock()
+	for id := range taskStorage {
+		ids = append(ids, id)
+	}
+	taskMutex.Unlock()
+
+	if len(ids) == 0 {
+		http.Error(w, "Нет доступных задач", http.StatusNotFound)
 		return
 	}
 
-	ids := strings.Split(idsParam, ",")
 	var results []TaskStatusResponse
 	for _, id := range ids {
 		id = strings.TrimSpace(id)

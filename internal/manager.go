@@ -64,7 +64,7 @@ func addFileToTask(id, url string) error {
 	}
 
 	if len(task.Files) >= 3 {
-		return errors.New("в задаче уже максимум файлов")
+		return errors.New("в данной задаче уже 3 файла, создайте, пожалуйста, новую задачу")
 	}
 
 	ext := strings.ToLower(path.Ext(url))
