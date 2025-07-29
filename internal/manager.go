@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"log"
 	"path"
 	"strings"
 	"sync"
@@ -84,5 +85,7 @@ func addFileToTask(id, url string) error {
 func finishTask(task *Task) {
 	taskMutex.Lock()
 	defer taskMutex.Unlock()
+
 	activeTasks--
+	log.Printf("Задача завершена: %s, статус: %s", task.ID, task.Status)
 }

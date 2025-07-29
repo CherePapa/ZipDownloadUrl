@@ -1,8 +1,8 @@
 package internal
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
 	"os"
 )
 

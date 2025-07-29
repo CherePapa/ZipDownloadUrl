@@ -31,18 +31,24 @@ func runTask(task *Task) {
 			task.Error = append(task.Error, "ошибка скачивания: "+url)
 			continue
 		}
-		defer resp.Body.Close()
+		body := resp.Body
 
 		name := filepath.Base(url)
 		w, err := zipWriter.Create(name)
 		if err != nil {
 			task.Error = append(task.Error, "Ошибка zip: "+url)
+			body.Close()
 			continue
 		}
 		io.Copy(w, resp.Body)
+		body.Close()
 	}
 
-	task.Status = StatusDone
-	task.Results = "/archive/" + task.ID + ".zip"
+	if len(task.Error) > 0 {
+		task.Error = append(task.Error, "Ошибка скачивания")
+	} else {
+		task.Status = StatusDone
+		task.Results = "/archive/" + task.ID + ".zip"
+	}
 	finishTask(task)
 }

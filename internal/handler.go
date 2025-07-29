@@ -6,27 +6,51 @@ import (
 	"strings"
 )
 
+type TaskStatusResponse struct {
+	TaskID      string   `json:"task_id"`
+	Status      string   `json:"status"`
+	Files       int      `json:"files,omitempty"`
+	DownloadURL string   `json:"download_url,omitempty"`
+	Errors      []string `json:"errors,omitempty"`
+}
+
+type TaskCreateResponse struct {
+	TaskID string `json:"task_id"`
+}
+
+type AddFileRequest struct {
+	TaskID string `json:"task_id"`
+	URL    string `json:"url"`
+}
+
+type GenericMessageRespose struct {
+	Message string `json:"message"`
+}
+
 func HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 	task, err := createTask()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{"task_id": task.ID})
+	json.NewEncoder(w).Encode(TaskCreateResponse{TaskID: task.ID})
 }
 
 func HandleAddFile(w http.ResponseWriter, r *http.Request) {
-	var data struct {
-		TaskID string `json:"task_id"`
-		URL    string `json:"url"`
-	}
-	json.NewDecoder(r.Body).Decode(&data)
-	err := addFileToTask(data.TaskID, data.URL)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
+	var data AddFileRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, "invalid json", 400)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{"message": "file added"})
+
+	if err := addFileToTask(data.TaskID, data.URL); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	resp := GenericMessageRespose{Message: "file added"}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
 
 func HandleStatus(w http.ResponseWriter, r *http.Request) {
@@ -35,22 +59,25 @@ func HandleStatus(w http.ResponseWriter, r *http.Request) {
 	task, err := getTask(id)
 
 	if err != nil {
-		http.Error(w, err.Error(), 404)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	resp := map[string]interface{}{
-		"status": task.Status,
-		"files":  len(task.Files),
+	resp := TaskStatusResponse{
+		TaskID: id,
+		Status: string(task.Status),
+		Files:  len(task.Files),
 	}
 
 	if task.Status == StatusDone {
-		resp["download_url"] = task.Results
+		resp.DownloadURL = task.Results
 	}
 
 	if len(task.Error) > 0 {
-		resp["errors"] = task.Error
+		resp.Errors = task.Error
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -62,29 +89,31 @@ func HandleMultiStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ids := strings.Split(idsParam, ",")
-	var results []map[string]interface{}
+	var results []TaskStatusResponse
 	for _, id := range ids {
 		id = strings.TrimSpace(id)
 		task, err := getTask(id)
 		if err != nil {
-			results = append(results, map[string]interface{}{
-				"task_id": id,
-				"status":  "not_found",
+			results = append(results, TaskStatusResponse{
+				TaskID: id,
+				Status: "not_found",
 			})
 			continue
 		}
-		res := map[string]interface{}{
-			"task_id": task.ID,
-			"status":  task.Status,
-			"files":   len(task.Files),
+		res := TaskStatusResponse{
+			TaskID: id,
+			Status: string(task.Status),
+			Files:  len(task.Files),
 		}
 		if task.Status == StatusDone {
-			res["download_url"] = task.Results
+			res.DownloadURL = task.Results
 		}
 		if len(task.Error) > 0 {
-			res["errors"] = task.Error
+			res.Errors = task.Error
 		}
 		results = append(results, res)
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
 }
