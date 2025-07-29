@@ -9,7 +9,7 @@ import (
 func HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 	task, err := createTask()
 	if err != nil {
-		http.Error(w, err.Error(), 503)
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]string{"task_id": task.ID})

@@ -20,7 +20,7 @@ func createTask() (*Task, error) {
 	defer taskMutex.Unlock()
 
 	if activeTasks >= MaxActiveTasks {
-		return nil, errors.New("сервер занят, подождите загрузки файлов!")
+		return nil, errors.New("сервер занят, подождите загрузки файлов")
 	}
 
 	id := generateID()
@@ -29,6 +29,9 @@ func createTask() (*Task, error) {
 		Files:  []string{},
 		Status: StatusWaiting,
 	}
+
+	taskStorage[id] = task
+	activeTasks++
 
 	return task, nil
 }
@@ -40,7 +43,7 @@ func getTask(id string) (*Task, error) {
 	task, ok := taskStorage[id]
 
 	if !ok {
-		return nil, errors.New("Задача не найдена")
+		return nil, errors.New("задача не найдена")
 	}
 
 	return task, nil
@@ -48,20 +51,19 @@ func getTask(id string) (*Task, error) {
 
 func addFileToTask(id, url string) error {
 	taskMutex.Lock()
-	taskMutex.Unlock()
+	defer taskMutex.Unlock()
 
 	task, ok := taskStorage[id]
-
 	if !ok {
-		return errors.New("Задача не найдена!")
+		return errors.New("задача не найдена")
 	}
 
 	if task.Status != StatusWaiting {
-		return errors.New("Здача уже в работе")
+		return errors.New("задача уже в работе")
 	}
 
 	if len(task.Files) >= 3 {
-		return errors.New("В задаче уже максимум файлов!")
+		return errors.New("в задаче уже максимум файлов")
 	}
 
 	ext := strings.ToLower(path.Ext(url))
@@ -81,6 +83,6 @@ func addFileToTask(id, url string) error {
 
 func finishTask(task *Task) {
 	taskMutex.Lock()
-	taskMutex.Unlock()
+	defer taskMutex.Unlock()
 	activeTasks--
 }
